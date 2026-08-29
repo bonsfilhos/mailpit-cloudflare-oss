@@ -1,0 +1,17 @@
+From: Sender Anywhere <sender@example.net>
+To: generic+preview+inbound@preview-mail.example.com
+Subject: Provider-independent inbound
+Message-ID: <provider-independent@example.net>
+Date: Sat, 29 Aug 2026 12:00:00 -0300
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="mailpit-cloudflare-fixture"
+
+--mailpit-cloudflare-fixture
+Content-Type: text/plain; charset=utf-8
+
+This message did not come from a Mailpit Cloudflare-specific provider integration.
+--mailpit-cloudflare-fixture
+Content-Type: text/html; charset=utf-8
+
+<p>This message did not come from a Mailpit Cloudflare-specific provider integration.</p>
+--mailpit-cloudflare-fixture--

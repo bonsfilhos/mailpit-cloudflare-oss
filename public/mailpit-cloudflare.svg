@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 72" role="img" aria-labelledby="title">
+  <title id="title">Mailpit Cloudflare</title>
+  <path d="M20 31C21 19 31 10 43 10c10 0 19 6 22 15 10 0 18 8 18 18S75 61 65 61H24C13 61 5 53 5 43c0-7 6-12 15-12Z" fill="currentColor" opacity=".2"/>
+  <rect x="22" y="30" width="52" height="32" rx="4" fill="currentColor"/>
+  <path d="m25 34 23 17 23-17" fill="none" stroke="#fff" stroke-width="5" stroke-linejoin="round"/>
+</svg>
