@@ -25,7 +25,7 @@
     "types": "npm run config:generate && wrangler types --config wrangler.generated.jsonc"
   },
   "dependencies": {
-    "axios": "^1.13.5",
+    "axios": "^1.20.0",
     "bootstrap": "^5.3.8",
     "bootstrap-icons": "^1.13.1",
     "bootstrap5-tags": "^1.7.4",
