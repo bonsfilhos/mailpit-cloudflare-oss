@@ -1,0 +1,4 @@
+AUTH_REQUIRED=false
+BASIC_AUTH_USERNAME=local
+BASIC_AUTH_PASSWORD=local-only-password
+INGEST_TOKEN=replace-with-a-local-only-token
