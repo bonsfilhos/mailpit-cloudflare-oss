@@ -42,7 +42,7 @@
     "timezones-list": "^3.1.0",
     "vue": "^3.5.22",
     "vue-css-donut-chart": "^2.0.0",
-    "vue-router": "^4.6.3",
+    "vue-router": "^5.2.0",
     "zod": "^4.1.12"
   },
   "devDependencies": {
