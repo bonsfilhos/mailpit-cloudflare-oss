@@ -37,7 +37,7 @@
     "ical.js": "^2.2.1",
     "mitt": "^3.0.1",
     "modern-screenshot": "^4.6.7",
-    "postal-mime": "^2.7.4",
+    "postal-mime": "^3.0.0",
     "rapidoc": "^9.3.8",
     "timezones-list": "^3.1.0",
     "vue": "^3.5.22",
