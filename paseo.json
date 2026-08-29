@@ -1,0 +1,50 @@
+{
+  "worktree": {
+    "setup": [
+      "npm ci",
+      "npm run build:ui",
+      "npm run db:migrate:local"
+    ],
+    "terminals": [
+      {
+        "name": "shell",
+        "command": "zsh"
+      }
+    ],
+    "servicePorts": {
+      "range": "8787-8899"
+    }
+  },
+  "scripts": {
+    "status": {
+      "command": "git status --short --branch && git worktree list"
+    },
+    "web": {
+      "type": "service",
+      "command": "npm run dev -- --ip $HOST --port $PASEO_PORT"
+    },
+    "db-migrate": {
+      "command": "npm run db:migrate:local"
+    },
+    "test": {
+      "command": "npm run test"
+    },
+    "ci": {
+      "command": "npm run ci"
+    },
+    "build": {
+      "command": "npm run build"
+    }
+  },
+  "metadataGeneration": {
+    "branchName": {
+      "instructions": "Use short descriptive branches scoped to Mailpit Cloudflare behavior."
+    },
+    "commitMessage": {
+      "instructions": "Use concise imperative English commits and preserve upstream attribution."
+    },
+    "pullRequest": {
+      "instructions": "Mention Mailpit parity, Cloudflare resources, migrations, security effects and validation."
+    }
+  }
+}

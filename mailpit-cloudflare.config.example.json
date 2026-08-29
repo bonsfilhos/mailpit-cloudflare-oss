@@ -1,0 +1,34 @@
+{
+  "$schema": "./config/mailpit-cloudflare.schema.json",
+  "worker": {
+    "name": "mailpit-cloudflare",
+    "compatibilityDate": "2026-08-27",
+    "inboxLabel": "Preview Mail",
+    "inboundDomain": "preview-mail.example.com",
+    "webHostname": null,
+    "workersDev": true,
+    "basicAuthUsername": "preview",
+    "authRequired": true,
+    "retentionDays": 7,
+    "maxMessages": 500,
+    "maxMessageBytes": 26214400,
+    "cron": "17 * * * *",
+    "eventLocation": "enam",
+    "observability": {
+      "enabled": true,
+      "headSamplingRate": 1
+    },
+    "sourceRepositoryUrl": "https://github.com/bonsfilhos/mailpit-cloudflare-oss"
+  },
+  "cloudflare": {
+    "d1DatabaseName": "mailpit-cloudflare-db",
+    "d1DatabaseId": null,
+    "d1Location": "enam",
+    "r2BucketName": "mailpit-cloudflare-messages",
+    "r2Location": "enam"
+  },
+  "dns": {
+    "apexDomain": "example.com",
+    "expectedApexMx": []
+  }
+}

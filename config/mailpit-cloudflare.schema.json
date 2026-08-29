@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/bonsfilhos/mailpit-cloudflare-oss/blob/main/config/mailpit-cloudflare.schema.json",
+  "title": "Mailpit Cloudflare configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["worker", "cloudflare", "dns"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "worker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "compatibilityDate",
+        "inboxLabel",
+        "inboundDomain",
+        "webHostname",
+        "workersDev",
+        "basicAuthUsername",
+        "authRequired",
+        "retentionDays",
+        "maxMessages",
+        "maxMessageBytes",
+        "cron",
+        "eventLocation",
+        "observability",
+        "sourceRepositoryUrl"
+      ],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,62}$" },
+        "compatibilityDate": { "type": "string", "format": "date" },
+        "inboxLabel": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "inboundDomain": { "type": "string", "minLength": 3 },
+        "webHostname": { "type": ["string", "null"] },
+        "workersDev": { "type": "boolean" },
+        "basicAuthUsername": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "authRequired": { "const": true },
+        "retentionDays": { "type": "integer", "minimum": 1, "maximum": 365 },
+        "maxMessages": { "type": "integer", "minimum": 1, "maximum": 100000 },
+        "maxMessageBytes": { "type": "integer", "minimum": 1024, "maximum": 52428800 },
+        "cron": { "type": "string", "minLength": 1 },
+        "eventLocation": { "enum": ["weur", "eeur", "apac", "oc", "wnam", "enam"] },
+        "observability": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "headSamplingRate"],
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "headSamplingRate": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        },
+        "sourceRepositoryUrl": { "type": "string", "format": "uri" }
+      }
+    },
+    "cloudflare": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["d1DatabaseName", "d1DatabaseId", "d1Location", "r2BucketName", "r2Location"],
+      "properties": {
+        "d1DatabaseName": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-_]{0,62}$" },
+        "d1DatabaseId": {
+          "type": ["string", "null"],
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "d1Location": { "enum": ["weur", "eeur", "apac", "oc", "wnam", "enam"] },
+        "r2BucketName": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,62}$" },
+        "r2Location": { "enum": ["weur", "eeur", "apac", "oc", "wnam", "enam"] }
+      }
+    },
+    "dns": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["apexDomain", "expectedApexMx"],
+      "properties": {
+        "apexDomain": { "type": "string", "minLength": 3 },
+        "expectedApexMx": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 3 }
+        }
+      }
+    }
+  }
+}
