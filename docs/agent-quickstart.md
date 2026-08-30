@@ -10,6 +10,7 @@ Install one isolated Mailpit Cloudflare instance without modifying the apex doma
 - A Cloudflare account with Workers, D1, R2 and a DNS zone.
 - Wrangler authenticated with the intended Cloudflare account.
 - A dedicated inbound subdomain.
+- A DNS zone whose single Email Routing catch-all is not assigned to another inbox.
 - Explicit authorization before creating resources, deploying or changing Email Routing.
 
 ## Safe sequence
@@ -34,6 +35,8 @@ npm run setup:cloudflare -- --config mailpit-cloudflare.config.json --apply
 npx wrangler secret put BASIC_AUTH_PASSWORD --config wrangler.generated.jsonc
 npm run deploy
 ```
+
+The deploy command runs a remote pre-deploy diagnosis. It verifies storage, the required secret and the recorded apex MX invariant, but deliberately defers the new inbound MX because Email Routing is configured only after the Worker exists.
 
 Configure the inbound subdomain and catch-all in Cloudflare Email Routing only after recording the apex MX set. Then:
 
@@ -63,5 +66,6 @@ Stop before mutation when:
 - apex MX records differ from the recorded set;
 - authentication is disabled;
 - the task would route email to a human recipient.
+- the zone catch-all already belongs to another Worker or destination.
 
 Do not infer permission to delete resources, replace routing rules or deploy over an existing Worker.

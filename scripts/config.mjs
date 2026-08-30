@@ -27,6 +27,28 @@ function integer(value, name, minimum, maximum) {
   }
 }
 
+export function normalizeMxHosts(records) {
+  return records
+    .map((record) => (typeof record === "string" ? record : record.exchange))
+    .filter(Boolean)
+    .map((host) => host.trim().toLowerCase().replace(/\.$/, ""))
+    .sort();
+}
+
+export function assertApexMxInvariant(actualRecords, expectedHosts, apexDomain) {
+  const actual = normalizeMxHosts(actualRecords);
+  const expected = normalizeMxHosts(expectedHosts);
+
+  if (actual.length > 0 && expected.length === 0) {
+    fail(`dns.expectedApexMx must record the current MX set for ${apexDomain} before remote setup`);
+  }
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    fail(`the current MX set for ${apexDomain} differs from dns.expectedApexMx`);
+  }
+
+  return actual;
+}
+
 export function validateConfig(config, { remote = false, requireD1Id = remote } = {}) {
   if (!config || typeof config !== "object") fail("the root value must be an object");
   const { worker, cloudflare, dns } = config;
@@ -181,12 +203,13 @@ export function saveInstanceConfig(config, configPath) {
 }
 
 export function parseCommonArgs(argv) {
-  const args = { configPath: undefined, remote: false, apply: false };
+  const args = { configPath: undefined, remote: false, apply: false, predeploy: false };
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index];
     if (value === "--config") args.configPath = argv[++index];
     else if (value === "--remote") args.remote = true;
     else if (value === "--apply") args.apply = true;
+    else if (value === "--predeploy") args.predeploy = true;
     else fail(`unknown argument ${value}`);
   }
   return args;

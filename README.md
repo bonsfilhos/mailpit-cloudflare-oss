@@ -37,6 +37,8 @@ curl -X POST http://127.0.0.1:8787/api/v1/send \
   -d '{"From":{"Email":"sender@example.com"},"To":[{"Email":"preview@preview-mail.example.com"}],"Subject":"Smoke test","Text":"Hello"}'
 ```
 
+Wrangler reads `.dev.vars` when the local server starts. Restart `npm run dev` after changing it.
+
 ## Cloudflare installation
 
 ```bash

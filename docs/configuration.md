@@ -37,9 +37,9 @@
 | Field | Purpose |
 | --- | --- |
 | `apexDomain` | Parent domain whose mail must remain intact |
-| `expectedApexMx` | Optional exact MX baseline checked before and after routing changes |
+| `expectedApexMx` | Exact MX baseline checked before and after routing changes |
 
-Leave `expectedApexMx` empty only when no exact invariant is required. Production operators should record the current apex MX set.
+Record the current apex MX set before remote setup. Leave `expectedApexMx` empty only when the apex currently has no usable MX records; setup fails closed when it finds mail service without a recorded baseline.
 
 ## Secrets
 

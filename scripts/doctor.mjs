@@ -1,7 +1,8 @@
 import { execFileSync } from "node:child_process";
-import { resolveMx } from "node:dns/promises";
+import { Resolver } from "node:dns/promises";
 import { existsSync, readFileSync } from "node:fs";
 import {
+  assertApexMxInvariant,
   buildWranglerConfig,
   GENERATED_CONFIG_PATH,
   loadConfig,
@@ -10,15 +11,26 @@ import {
   writeGeneratedConfig
 } from "./config.mjs";
 
+const resolver = new Resolver();
+resolver.setServers([process.env.DNS_RESOLVER || "1.1.1.1"]);
+
 function wrangler(args) {
   return execFileSync("npx", ["wrangler", ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 }
 
-function normalizeMx(rows) {
-  return rows.map((row) => row.exchange.replace(/\.$/, "").toLowerCase()).sort();
+async function mxRecords(domain) {
+  try {
+    return await resolver.resolveMx(domain);
+  } catch (error) {
+    if (error?.code === "ENODATA") return [];
+    throw error;
+  }
 }
 
 const args = parseCommonArgs(process.argv.slice(2));
+if (args.predeploy && !args.remote) {
+  throw new Error("--predeploy is valid only with --remote.");
+}
 const { config, configPath, isExample } = loadConfig(args.configPath, { remote: args.remote });
 validateConfig(config, { remote: args.remote });
 
@@ -58,18 +70,26 @@ if (args.remote) {
   }
   checks.push("required Worker secret exists");
 
-  const inboundMx = normalizeMx(await resolveMx(config.worker.inboundDomain));
-  if (!inboundMx.length) throw new Error("Inbound domain has no MX records.");
-  checks.push(`inbound MX resolves (${inboundMx.length} records)`);
+  assertApexMxInvariant(
+    await mxRecords(config.dns.apexDomain),
+    config.dns.expectedApexMx,
+    config.dns.apexDomain
+  );
+  checks.push("apex MX invariant preserved");
 
-  if (config.dns.expectedApexMx.length) {
-    const apexMx = normalizeMx(await resolveMx(config.dns.apexDomain));
-    const expected = [...config.dns.expectedApexMx].map((host) => host.toLowerCase()).sort();
-    if (JSON.stringify(apexMx) !== JSON.stringify(expected)) {
-      throw new Error("Apex MX records differ from dns.expectedApexMx.");
-    }
-    checks.push("apex MX invariant preserved");
+  if (args.predeploy) {
+    checks.push("inbound MX deferred until Email Routing is configured");
+  } else {
+    const inboundMx = await mxRecords(config.worker.inboundDomain);
+    if (!inboundMx.length) throw new Error("Inbound domain has no MX records.");
+    checks.push(`inbound MX resolves (${inboundMx.length} records)`);
   }
 }
 
-console.log(JSON.stringify({ ok: true, mode: args.remote ? "remote" : "local", checks }, null, 2));
+console.log(
+  JSON.stringify(
+    { ok: true, mode: args.remote ? (args.predeploy ? "remote-predeploy" : "remote") : "local", checks },
+    null,
+    2
+  )
+);
