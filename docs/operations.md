@@ -2,6 +2,8 @@
 
 ## Preflight
 
+For an established instance whose Email Routing already exists:
+
 ```bash
 npm run ci
 npm run doctor -- --config mailpit-cloudflare.config.json --remote
@@ -9,6 +11,10 @@ npm run db:migrations:remote
 ```
 
 Inspect pending migrations before deployment.
+
+For the first deployment, before the inbound MX exists, use `--remote --predeploy`; `npm run deploy` already does this. After routing is configured, always run the full remote diagnosis.
+
+DNS checks use Cloudflare's public resolver by default. Set `DNS_RESOLVER` only when the operator intentionally needs another recursive resolver.
 
 ## Deploy
 
@@ -40,6 +46,8 @@ npx wrangler secret put BASIC_AUTH_PASSWORD --config wrangler.generated.jsonc
 Rotate the password atomically with every authorized client. Never place it in shell history, documentation or versioned configuration.
 
 ## Recovery
+
+If first-time setup stops after creating D1 or R2, keep the same ignored configuration and rerun `setup:cloudflare -- --apply`. The command reuses the exact resource names, validates the recorded D1 ID and reapplies idempotent migrations.
 
 1. Restore the ignored instance configuration from the operator's secret/config store.
 2. Regenerate Wrangler configuration.

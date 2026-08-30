@@ -14,7 +14,7 @@ describe("Mailpit Cloudflare search", () => {
     const result = compileSearch(
       "to:storefront tag:preview is:unread has:attachment larger:10kb after:2026-08-01"
     );
-    expect(result.sql).toContain("m.to_search LIKE ?");
+    expect(result.sql).toContain("instr(m.to_search, ?) > 0");
     expect(result.sql).toContain("message_tags");
     expect(result.sql).toContain("m.is_read = 0");
     expect(result.sql).toContain("m.attachment_count > 0");
@@ -24,7 +24,16 @@ describe("Mailpit Cloudflare search", () => {
     expect(result.params).toContain("2026-08-01T00:00:00.000Z");
   });
 
-  test("escapes SQL wildcard characters", () => {
-    expect(compileSearch("subject:100%_ok").params).toEqual(["%100\\%\\_ok%"]);
+  test("treats SQL wildcard characters literally", () => {
+    const result = compileSearch("subject:100%_ok");
+    expect(result.sql).toContain("instr(LOWER(m.subject), ?) > 0");
+    expect(result.params).toEqual(["100%_ok"]);
+  });
+
+  test("uses substring search for long quoted subjects", () => {
+    const subject = "Mailpit Cloudflare public SMTP smoke 20260830T173310Z";
+    const result = compileSearch(`subject:"${subject}"`);
+    expect(result.sql).toContain("instr(LOWER(m.subject), ?) > 0");
+    expect(result.params).toEqual([subject.toLowerCase()]);
   });
 });

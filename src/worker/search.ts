@@ -62,11 +62,11 @@ export function compileSearch(query: string): SearchClause {
     };
 
     if (field in searchColumn) {
-      sql = `${searchColumn[field]} LIKE ? ESCAPE '\\'`;
-      localParams.push(like(value));
+      sql = `instr(${searchColumn[field]}, ?) > 0`;
+      localParams.push(value);
     } else if (field === "tag") {
-      sql = "EXISTS (SELECT 1 FROM message_tags st WHERE st.message_id = m.id AND LOWER(st.tag) LIKE ? ESCAPE '\\')";
-      localParams.push(like(value));
+      sql = "EXISTS (SELECT 1 FROM message_tags st WHERE st.message_id = m.id AND instr(LOWER(st.tag), ?) > 0)";
+      localParams.push(value);
     } else if ((field === "is" || field === "read") && ["read", "true", "yes"].includes(value)) {
       sql = "m.is_read = 1";
     } else if ((field === "is" || field === "read") && ["unread", "false", "no"].includes(value)) {
@@ -86,8 +86,8 @@ export function compileSearch(query: string): SearchClause {
         localParams.push(date);
       }
     } else {
-      sql = "m.search_text LIKE ? ESCAPE '\\'";
-      localParams.push(like(token.value.toLowerCase()));
+      sql = "instr(m.search_text, ?) > 0";
+      localParams.push(token.value.toLowerCase());
     }
 
     if (!sql) continue;
@@ -96,8 +96,4 @@ export function compileSearch(query: string): SearchClause {
   }
 
   return { sql: clauses.length ? clauses.join(" AND ") : "1 = 1", params };
-}
-
-function like(value: string): string {
-  return `%${value.replace(/[\\%_]/g, "\\$&")}%`;
 }

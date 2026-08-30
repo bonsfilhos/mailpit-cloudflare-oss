@@ -1,6 +1,12 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
-import { buildWranglerConfig, LOCAL_D1_ID, validateConfig } from "../scripts/config.mjs";
+import {
+  assertApexMxInvariant,
+  buildWranglerConfig,
+  LOCAL_D1_ID,
+  parseCommonArgs,
+  validateConfig
+} from "../scripts/config.mjs";
 
 const example = JSON.parse(readFileSync("mailpit-cloudflare.config.example.json", "utf8"));
 
@@ -28,5 +34,33 @@ describe("instance configuration", () => {
     unconfigured.cloudflare.d1DatabaseId = "11111111-1111-4111-8111-111111111111";
 
     expect(() => validateConfig(unconfigured, { remote: true })).toThrow(/example\.com/);
+  });
+
+  test("parses the first-install remote diagnosis explicitly", () => {
+    expect(parseCommonArgs(["--remote", "--predeploy"])).toMatchObject({
+      remote: true,
+      predeploy: true
+    });
+  });
+
+  test("requires an exact apex MX baseline before remote mutation", () => {
+    const current = [{ exchange: "ASPMX.L.GOOGLE.COM.", priority: 1 }];
+
+    expect(() => assertApexMxInvariant(current, [], "example.org")).toThrow(/expectedApexMx/);
+    expect(assertApexMxInvariant(current, ["aspmx.l.google.com"], "example.org")).toEqual([
+      "aspmx.l.google.com"
+    ]);
+    expect(() =>
+      assertApexMxInvariant(current, ["other.example.org"], "example.org")
+    ).toThrow(/differs/);
+    expect(assertApexMxInvariant([], [], "example.org")).toEqual([]);
+  });
+
+  test("keeps the documented local ingestion token executable", () => {
+    const vars = readFileSync(".dev.vars.example", "utf8");
+    const readme = readFileSync("README.md", "utf8");
+
+    expect(vars).toContain("INGEST_TOKEN=local-development");
+    expect(readme).toContain("Authorization: Bearer local-development");
   });
 });

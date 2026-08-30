@@ -1,11 +1,25 @@
 import { execFileSync } from "node:child_process";
+import { Resolver } from "node:dns/promises";
 import {
+  assertApexMxInvariant,
   loadConfig,
   parseCommonArgs,
   saveInstanceConfig,
   validateConfig,
   writeGeneratedConfig
 } from "./config.mjs";
+
+const resolver = new Resolver();
+resolver.setServers([process.env.DNS_RESOLVER || "1.1.1.1"]);
+
+async function apexMx(domain) {
+  try {
+    return await resolver.resolveMx(domain);
+  } catch (error) {
+    if (error?.code === "ENODATA") return [];
+    throw error;
+  }
+}
 
 function wrangler(args, { capture = false, tolerateFailure = false } = {}) {
   try {
@@ -30,6 +44,11 @@ if (!args.configPath) {
 const { config, configPath, isExample } = loadConfig(args.configPath);
 if (isExample) throw new Error("Copy and edit the example configuration before provisioning.");
 validateConfig(config, { remote: true, requireD1Id: false });
+assertApexMxInvariant(
+  await apexMx(config.dns.apexDomain),
+  config.dns.expectedApexMx,
+  config.dns.apexDomain
+);
 
 const plan = {
   worker: config.worker.name,

@@ -1,11 +1,10 @@
 import { Resolver } from "node:dns/promises";
-import { loadConfig, parseCommonArgs } from "./config.mjs";
+import { assertApexMxInvariant, loadConfig, parseCommonArgs } from "./config.mjs";
 
 const args = parseCommonArgs(process.argv.slice(2));
 const { config } = loadConfig(args.configPath, { remote: true });
 const apexDomain = config.dns.apexDomain;
 const inboundDomain = config.worker.inboundDomain;
-const expectedApexMx = config.dns.expectedApexMx.map(normalize).sort();
 
 if (inboundDomain === apexDomain || !inboundDomain.endsWith(`.${apexDomain}`)) {
   throw new Error("The inbound domain must be a dedicated subdomain of the apex domain");
@@ -20,9 +19,9 @@ const [apexMx, inboundMx, inboundTxt] = await Promise.all([
   resolver.resolveTxt(inboundDomain).catch(() => [])
 ]);
 
-const actualApexMx = apexMx.map((record) => normalize(record.exchange)).sort();
+const actualApexMx = assertApexMxInvariant(apexMx, config.dns.expectedApexMx, apexDomain);
 const actualInboundMx = inboundMx.map((record) => normalize(record.exchange)).sort();
-const apexUnchanged = expectedApexMx.length === 0 || same(actualApexMx, expectedApexMx);
+const apexUnchanged = true;
 const inboundReady =
   actualInboundMx.length > 0 && actualInboundMx.every((exchange) => exchange.endsWith(".mx.cloudflare.net"));
 const routingSpf = inboundTxt.some((chunks) => chunks.join("").includes("include:_spf.mx.cloudflare.net"));
@@ -44,8 +43,4 @@ if (!routingSpf) throw new Error(`Cloudflare Email Routing SPF record is missing
 
 function normalize(value) {
   return value.trim().toLowerCase().replace(/\.$/, "");
-}
-
-function same(left, right) {
-  return left.length === right.length && left.every((value, index) => value === right[index]);
 }

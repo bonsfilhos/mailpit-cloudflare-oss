@@ -32,3 +32,7 @@ Mailpit Cloudflare does not send, release, relay or forward mail. Any future out
 ## DNS safety
 
 Email Routing is subdomain-only. Record and verify the apex MX set before and after routing changes. Automated setup never mutates Email Routing or DNS.
+
+## Public-ingress cost boundary
+
+The inbound catch-all is intentionally reachable by arbitrary SMTP senders. Retention, maximum message count and maximum message size bound stored data but do not eliminate request consumption. Monitor Workers, D1 and R2 usage, keep limits conservative and disable unused routing rules.
