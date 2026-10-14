@@ -40,3 +40,5 @@ Cloudflare Access may replace or sit in front of Basic Auth, but is not a runtim
 ## Instance separation
 
 Reusable source contains no active infrastructure. Each installation owns an ignored instance configuration, generated Wrangler file, Cloudflare resources and routing rules.
+
+The event hub persists revoked browser-session hashes with their original expiration in its existing Durable Object storage. Both the delayed handshake and broadcast paths consult those records. Storage transactions preserve deadlines and remove only expired records; alarms cover sockets and revocation cleanup. No additional Cloudflare resource or migration is required.

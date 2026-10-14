@@ -42,3 +42,9 @@ Email Routing is subdomain-only. Record and verify the apex MX set before and af
 ## Public-ingress cost boundary
 
 The inbound catch-all is intentionally reachable by arbitrary SMTP senders. Retention, maximum message count and maximum message size bound stored data but do not eliminate request consumption. Monitor Workers, D1 and R2 usage, keep limits conservative and disable unused routing rules.
+
+## Session revocation ordering
+
+Logout sends the original session expiration to the event hub. The Durable Object stores a revocation record in its existing durable storage until that deadline, rejecting authenticated handshakes that arrive after logout and withholding subsequent broadcasts. Recreating or hibernating the object cannot forget the record. Old revocation requests without a deadline retain a full 12-hour TTL; repeated revocation never shortens an existing deadline. Cleanup runs transactionally and schedules the earliest socket or revocation expiration. Default storage input/output gates remain enabled.
+
+Raw MIME is fetched lazily through the authenticated API and displayed as escaped text, without an iframe or HTML execution. Message changes invalidate pending loads. Raw download preserves the immutable MIME and the Worker continues to set X-Frame-Options DENY.

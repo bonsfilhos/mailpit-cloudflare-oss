@@ -144,7 +144,8 @@ export async function getSession(request: Request, env: Env, now = Date.now()): 
 export async function revokeSession(env: Env, session: BrowserSession): Promise<void> {
   await env.DB.prepare("DELETE FROM browser_sessions WHERE token_hash = ?").bind(session.token_hash).run();
   const response = await env.EVENTS.getByName("global", { locationHint: env.EVENT_LOCATION_HINT }).fetch("https://events.internal/revoke", {
-    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sessionHash: session.token_hash })
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ sessionHash: session.token_hash, expiresAt: session.expires_at })
   });
   if (!response.ok) throw new Error("Session event revocation failed");
 }

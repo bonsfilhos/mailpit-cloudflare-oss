@@ -191,6 +191,7 @@ describe("browser login boundary", () => {
     expect(response.headers.get("set-cookie")).toContain("Max-Age=0");
     expect(f.sessions.size).toBe(0);
     expect(f.eventRequests[0]!.url).toBe("https://events.internal/revoke");
+    expect(await f.eventRequests[0]!.json()).toMatchObject({ expiresAt: expect.any(Number) });
     expect((await f.request("/api/v1/", { headers: browserHeaders({ cookie }) })).status).toBe(401);
   });
 });
