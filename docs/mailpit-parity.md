@@ -11,6 +11,7 @@ Mailpit Cloudflare preserves the applicable Mailpit browser experience and API s
 | Read/unread and deletion | Supported |
 | Browser notifications and live updates | Supported |
 | REST assertions | Supported subset |
+| Browser authentication | Native password-manager form and revocable session; Basic Auth preserved for automations |
 | SMTP listener | Replaced by Cloudflare Email Routing |
 | Persistent filesystem | Replaced by D1 and R2 |
 | Message release/relay | Disabled |

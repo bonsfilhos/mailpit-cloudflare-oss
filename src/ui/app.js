@@ -2,6 +2,7 @@ import App from "./App.vue";
 import router from "./router";
 import { createApp } from "vue";
 import mitt from "mitt";
+import { initializeAuth } from "./auth";
 
 import "./assets/styles.scss";
 import "bootstrap-icons/font/bootstrap-icons.scss";
@@ -16,4 +17,11 @@ const eventBus = mitt();
 app.provide("eventBus", eventBus);
 
 app.use(router);
-app.mount("#app");
+initializeAuth().then((ready) => {
+	if (ready) app.mount("#app");
+}).catch(() => {
+	const warning = document.createElement("p");
+	warning.className = "alert alert-danger m-3";
+	warning.textContent = "Não foi possível abrir o Mailpit Cloudflare. Recarregue a página para tentar novamente.";
+	document.getElementById("app").append(warning);
+});

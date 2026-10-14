@@ -26,12 +26,20 @@ Deployment does not create or replace Email Routing rules.
 
 ## Smoke test
 
-1. Confirm the inbox returns `401` without credentials.
+1. Confirm browser navigation redirects to `/login` without a Basic prompt; unauthenticated API requests return `401`.
 2. Authenticate and confirm an empty or expected mailbox.
 3. Send a unique message from an external provider to the inbound subdomain.
 4. Confirm envelope metadata, intended recipients, tags, HTML, text, raw MIME and attachments.
 5. Confirm API search locates the message.
 6. Check Worker errors and D1/R2 availability.
+
+## Browser access
+
+Use the configured inbox URL normally. `/login` presents a standard username/password form with labels and autocomplete for Bitwarden or another password manager; it uses a real POST and internal redirect. The existing Worker credential remains valid. “Sair” revokes the current session; otherwise it expires after at most 12 hours. Non-browser API automations retain HTTP Basic.
+
+Apply `0002_browser_sessions.sql` to the existing instance D1 before deploying this release. The retention cron also prunes expired session rows. No new resource, secret, Email Routing rule or DNS change is required. The configured inbox label and event placement remain instance-owned.
+
+Local validation must use the public example configuration and an explicitly synthetic `.dev.vars` credential. Never copy an actual deployment password into local files. Cookies remain Secure even locally: use browser-recognized trustworthy localhost origins or HTTPS, never an insecure remote-cookie exception.
 
 ## Retention
 

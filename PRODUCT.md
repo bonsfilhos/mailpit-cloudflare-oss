@@ -17,6 +17,7 @@ Send a non-production email through the application's normal public delivery cha
 ## Surfaces
 
 - Authenticated web inbox.
+- Native username/password login compatible with password managers, with logout and bounded browser sessions.
 - Mailpit-compatible REST API subset.
 - Public Cloudflare Email Worker for inbound delivery.
 - Public health endpoint without message data.

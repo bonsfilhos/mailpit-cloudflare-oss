@@ -11,6 +11,7 @@ import { mailbox } from "../../stores/mailbox";
 import DOMPurify from "dompurify";
 import hljs from "highlight.js/lib/core";
 import xml from "highlight.js/lib/languages/xml";
+import axios from "axios";
 
 hljs.registerLanguage("html", xml);
 
@@ -37,7 +38,10 @@ export default {
 	data() {
 		return {
 			mailbox,
-			srcURI: false,
+			rawMessage: null,
+			rawLoading: false,
+			rawError: "",
+			rawRequestId: 0,
 			iframes: [], // for resizing
 			canSaveTags: false, // prevent auto-saving tags on render
 			availableTags: [],
@@ -119,6 +123,14 @@ export default {
 	},
 
 	watch: {
+		"message.ID"() {
+			this.rawRequestId++;
+			this.rawMessage = null;
+			this.rawLoading = false;
+			this.rawError = "";
+			if (document.getElementById("nav-raw-tab")?.classList.contains("active")) this.loadRawMessage();
+		},
+
 		messageTags() {
 			if (this.canSaveTags) {
 				// save changes to tags
@@ -149,8 +161,7 @@ export default {
 
 		const rawTab = document.getElementById("nav-raw-tab");
 		rawTab.addEventListener("shown.bs.tab", () => {
-			this.srcURI = this.resolve("/api/v1/message/" + this.message.ID + "/raw");
-			this.resizeIFrames();
+			this.loadRawMessage();
 		});
 
 		// manually refresh tags
@@ -166,7 +177,32 @@ export default {
 		});
 	},
 
+	beforeUnmount() {
+		this.rawRequestId++;
+	},
+
 	methods: {
+		async loadRawMessage() {
+			if (this.rawLoading || this.rawMessage !== null) return;
+			const messageId = this.message.ID;
+			const requestId = ++this.rawRequestId;
+			this.rawLoading = true;
+			this.rawError = "";
+			try {
+				const response = await axios.get(this.resolve(`/api/v1/message/${messageId}/raw`), {
+					responseType: "text",
+					transformResponse: [(value) => value],
+				});
+				if (requestId === this.rawRequestId && messageId === this.message.ID) this.rawMessage = response.data;
+			} catch (error) {
+				if (requestId === this.rawRequestId && messageId === this.message.ID && error.response?.status !== 401) {
+					this.rawError = "Não foi possível carregar o e-mail original. Tente novamente.";
+				}
+			} finally {
+				if (requestId === this.rawRequestId) this.rawLoading = false;
+			}
+		},
+
 		isHTMLTabSelected() {
 			this.showMobileButtons = this.$refs.navhtml && this.$refs.navhtml.classList.contains("active");
 		},
@@ -229,21 +265,6 @@ export default {
 			if (h?.contentWindow?.document?.body) {
 				h.style.height = h.contentWindow.document.body.scrollHeight + 50 + "px";
 			}
-		},
-
-		// set the iframe body & text colors based on current theme
-		initRawIframe(el) {
-			const bodyStyles = window.getComputedStyle(document.body, null);
-			const bg = bodyStyles.getPropertyValue("background-color");
-			const txt = bodyStyles.getPropertyValue("color");
-
-			const body = el.target.contentWindow.document.querySelector("body");
-			if (body) {
-				body.style.color = txt;
-				body.style.backgroundColor = bg;
-			}
-
-			this.resizeIframe(el);
 		},
 
 		// this function is unused but kept here to use for debugging
@@ -827,13 +848,12 @@ export default {
 				<Headers v-if="loadHeaders" :message="message"></Headers>
 			</div>
 			<div id="nav-raw" class="tab-pane fade" role="tabpanel" aria-labelledby="nav-raw-tab" tabindex="0">
-				<iframe
-					v-if="srcURI"
-					:src="srcURI"
-					frameborder="0"
-					style="width: 100%; height: 300px"
-					@load="initRawIframe"
-				></iframe>
+				<p v-if="rawLoading" role="status">Carregando o e-mail original…</p>
+				<div v-else-if="rawError" class="alert alert-danger" role="alert">
+					{{ rawError }}
+					<button type="button" class="btn btn-outline-danger btn-sm ms-2" @click="loadRawMessage">Tentar novamente</button>
+				</div>
+				<pre v-else-if="rawMessage !== null" class="border rounded p-3 overflow-auto"><code>{{ rawMessage }}</code></pre>
 			</div>
 			<div
 				id="nav-html-check"

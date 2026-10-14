@@ -3,6 +3,7 @@ import CommonMixins from "../mixins/CommonMixins";
 import { Toast } from "bootstrap";
 import { mailbox } from "../stores/mailbox";
 import { pagination } from "../stores/pagination";
+import { returnToLogin } from "../auth";
 
 export default {
 	mixins: [CommonMixins],
@@ -129,7 +130,8 @@ export default {
 				}
 			};
 
-			ws.onclose = () => {
+			ws.onclose = (event) => {
+				if (event.code === 1008) { returnToLogin(); return; }
 				if (this.socketLastConnection === 0) {
 					// connection failed immediately after connecting to Mailpit Cloudflare implies proxy websockets aren't configured
 					console.log("Unable to connect to websocket, disabling websocket support");

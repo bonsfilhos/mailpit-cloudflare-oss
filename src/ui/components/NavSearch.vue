@@ -1,6 +1,7 @@
 <script>
 import NavSelected from "../components/NavSelected.vue";
 import AjaxLoader from "./AjaxLoader.vue";
+import SessionLogout from "./SessionLogout.vue";
 import CommonMixins from "../mixins/CommonMixins";
 import { mailbox } from "../stores/mailbox";
 import { pagination } from "../stores/pagination";
@@ -9,6 +10,7 @@ export default {
 	components: {
 		NavSelected,
 		AjaxLoader,
+		SessionLogout,
 	},
 
 	mixins: [CommonMixins],
@@ -136,6 +138,7 @@ export default {
 			</template>
 
 			<NavSelected @load-messages="loadMessages" />
+			<SessionLogout />
 		</div>
 	</template>
 
