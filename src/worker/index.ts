@@ -18,55 +18,96 @@ import {
   updateReadState
 } from "./repository";
 import type { Env, SendApiPayload, StoredAttachment } from "./types";
+import {
+  SESSION_COOKIE, clearLoginCookie, cookie, createSession, credentialsConfigured,
+  getSession, hasBasicAuth, isMachineRequest, loginLocation, loginPage, pruneSessions,
+  readLoginForm, revokeSession, sameOrigin, timingSafeEqual, validCredentials,
+  validLoginCsrf, validReturnPath, validSessionCsrf, type BrowserSession
+} from "./auth";
 
 export { EventHub };
 
-type AppBindings = { Bindings: Env };
+type AppBindings = { Bindings: Env; Variables: { browserSession: BrowserSession | null } };
 const app = new Hono<AppBindings>();
-
-function timingSafeEqual(left: string, right: string): boolean {
-  const a = new TextEncoder().encode(left);
-  const b = new TextEncoder().encode(right);
-  if (a.length !== b.length) return false;
-  let mismatch = 0;
-  for (let index = 0; index < a.length; index++) mismatch |= (a[index] ?? 0) ^ (b[index] ?? 0);
-  return mismatch === 0;
-}
 
 function bearer(request: Request): string {
   return request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
 }
 
-function hasBasicAuth(request: Request, env: Env): boolean {
-  if (!env.BASIC_AUTH_USERNAME || !env.BASIC_AUTH_PASSWORD) return false;
-  const encoded = request.headers.get("authorization")?.match(/^Basic\s+(.+)$/i)?.[1];
-  if (!encoded) return false;
-  try {
-    const separator = atob(encoded).indexOf(":");
-    if (separator < 0) return false;
-    const decoded = atob(encoded);
-    return (
-      timingSafeEqual(decoded.slice(0, separator), env.BASIC_AUTH_USERNAME) &&
-      timingSafeEqual(decoded.slice(separator + 1), env.BASIC_AUTH_PASSWORD)
-    );
-  } catch {
-    return false;
-  }
-}
+app.use("*", async (context, next) => {
+  await next();
+  if (context.res.status !== 101) context.res = withSecurityHeaders(context.res);
+});
 
 app.use("*", async (context, next) => {
-  if (context.req.path === "/health" || context.req.path === "/api/v1/send") return next();
-  if (context.env.AUTH_REQUIRED === "true" && !hasBasicAuth(context.req.raw, context.env)) {
-    return new Response("Mailpit Cloudflare authentication is required", {
-      status: 401,
-      headers: {
-        "content-type": "text/plain; charset=utf-8",
-        "www-authenticate": 'Basic realm="Mailpit Cloudflare", charset="UTF-8"',
-        "cache-control": "no-store"
-      }
-    });
+  const path = context.req.path;
+  const request = context.req.raw;
+  if (["/health", "/api/v1/send", "/login", "/favicon.svg"].includes(path) || path.startsWith("/assets/")) return next();
+  context.set("browserSession", null);
+  if (context.env.AUTH_REQUIRED !== "true") return next();
+  if (!credentialsConfigured(context.env)) return context.json({ Error: "A autenticação do Mailpit Cloudflare não está configurada." }, 503);
+
+  const session = await getSession(request, context.env);
+  const basic = !session && isMachineRequest(request) && hasBasicAuth(request, context.env);
+  if (!session && !basic) {
+    if (!path.startsWith("/api/") && path !== "/auth/session") return context.redirect(loginLocation(request), 303);
+    if (isMachineRequest(request)) context.header("www-authenticate", 'Basic realm="Mailpit Cloudflare", charset="UTF-8"');
+    return context.json({ Error: "Sua sessão expirou. Entre novamente no Mailpit Cloudflare." }, 401);
   }
+  context.set("browserSession", session);
+
+  // Detail GET marks the message read, so it needs the same CSRF boundary as
+  // explicit mutations. Native logout forms validate their token in the route.
+  const changesState = !["GET", "HEAD", "OPTIONS"].includes(request.method)
+    || (["GET", "HEAD"].includes(request.method) && /^\/api\/v1\/message\/[^/]+$/.test(path));
+  if (session && changesState && path !== "/logout" && !validSessionCsrf(request, session)) {
+    return context.json({ Error: "A solicitação não pôde ser validada. Recarregue a página." }, 403);
+  }
+  if (path === "/api/events" && session && !sameOrigin(request)) return context.json({ Error: "Origem de eventos inválida." }, 403);
   return next();
+});
+
+app.get("/login", async (context) => {
+  if (context.env.AUTH_REQUIRED !== "true") return context.redirect("/", 303);
+  if (!credentialsConfigured(context.env)) return context.json({ Error: "A autenticação do Mailpit Cloudflare não está configurada." }, 503);
+  if (await getSession(context.req.raw, context.env)) {
+    return context.redirect(validReturnPath(context.req.query("return") ?? null, new URL(context.req.url).origin), 303);
+  }
+  return loginPage(context.req.raw, context.env);
+});
+
+app.post("/login", async (context) => {
+  if (!credentialsConfigured(context.env)) return context.json({ Error: "A autenticação do Mailpit Cloudflare não está configurada." }, 503);
+  if (!sameOrigin(context.req.raw)) return context.json({ Error: "Origem do login inválida." }, 403);
+  const form = await readLoginForm(context.req.raw);
+  if (!form || !await validLoginCsrf(context.req.raw, form.get("csrf") ?? "", context.env)) {
+    return loginPage(context.req.raw, context.env, { error: "O formulário expirou. Tente entrar novamente.", status: 403 });
+  }
+  const username = form.get("username") ?? "";
+  const password = form.get("password") ?? "";
+  const returnPath = validReturnPath(form.get("return"), new URL(context.req.url).origin);
+  if (username.length > 256 || password.length > 4_096 || !validCredentials(username, password, context.env)) {
+    return loginPage(context.req.raw, context.env, { error: "Usuário ou senha incorretos.", username: username.slice(0, 256), returnPath, status: 401 });
+  }
+  const { setCookie } = await createSession(context.env);
+  context.header("set-cookie", setCookie, { append: true });
+  context.header("set-cookie", clearLoginCookie(), { append: true });
+  return context.redirect(returnPath, 303);
+});
+
+app.get("/auth/session", (context) => {
+  const session = context.get("browserSession");
+  return context.json({ enabled: context.env.AUTH_REQUIRED === "true", csrf: session?.csrf_token ?? null, expiresAt: session?.expires_at ?? null });
+});
+
+app.post("/logout", async (context) => {
+  const session = context.get("browserSession");
+  if (!session || !sameOrigin(context.req.raw)) return context.json({ Error: "Solicitação de saída inválida." }, 403);
+  const form = await context.req.parseBody();
+  if (typeof form.csrf !== "string" || !timingSafeEqual(form.csrf, session.csrf_token)) return context.json({ Error: "Solicitação de saída inválida." }, 403);
+  await revokeSession(context.env, session);
+  context.header("set-cookie", cookie(SESSION_COOKIE, "", 0));
+  return context.redirect("/login", 303);
 });
 
 app.get("/health", async (context) => {
@@ -80,7 +121,15 @@ app.get("/health", async (context) => {
 
 app.get("/api/events", (context) => {
   const hub = context.env.EVENTS.getByName("global", { locationHint: context.env.EVENT_LOCATION_HINT });
-  return hub.fetch(context.req.raw);
+  const headers = new Headers(context.req.raw.headers);
+  headers.delete("x-cloudpit-session-hash");
+  headers.delete("x-cloudpit-session-expires");
+  const session = context.get("browserSession");
+  if (session) {
+    headers.set("x-cloudpit-session-hash", session.token_hash);
+    headers.set("x-cloudpit-session-expires", String(session.expires_at));
+  }
+  return hub.fetch(new Request(context.req.raw, { headers }));
 });
 
 app.get("/api/v1/messages", async (context) => {
@@ -429,9 +478,10 @@ async function broadcastNew(env: Env, summary: unknown): Promise<void> {
 function withSecurityHeaders(response: Response): Response {
   const headers = new Headers(response.headers);
   headers.set("x-content-type-options", "nosniff");
-  headers.set("referrer-policy", "no-referrer");
+  // Native forms need a non-null Origin; external sites still get no referrer.
+  headers.set("referrer-policy", headers.get("content-type")?.startsWith("text/html") ? "same-origin" : "no-referrer");
   headers.set("x-frame-options", "DENY");
-  headers.set("cache-control", response.headers.get("cache-control") ?? "private, no-store");
+  headers.set("cache-control", "private, no-store");
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }
 
@@ -449,6 +499,7 @@ export default {
     }
   },
   async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    await pruneSessions(env);
     const rows = await pruneMessages(env);
     if (!rows.length) return;
     ctx.waitUntil(

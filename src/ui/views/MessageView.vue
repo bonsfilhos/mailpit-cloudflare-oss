@@ -1,4 +1,5 @@
 <script>
+import SessionLogout from "../components/SessionLogout.vue";
 import AboutMailpitCloudflare from "../components/AppAbout.vue";
 import AjaxLoader from "../components/AjaxLoader.vue";
 import CommonMixins from "../mixins/CommonMixins";
@@ -11,6 +12,7 @@ import dayjs from "dayjs";
 
 export default {
 	components: {
+		SessionLogout,
 		AboutMailpitCloudflare,
 		AjaxLoader,
 		Message,
@@ -506,6 +508,7 @@ export default {
 			</button>
 		</div>
 		<div v-if="!errorMessage" class="col-auto col-lg-4 col-xl-4 text-end">
+			<SessionLogout toolbar />
 			<div id="DownloadBtn" class="dropdown d-inline-block">
 				<button
 					type="button"

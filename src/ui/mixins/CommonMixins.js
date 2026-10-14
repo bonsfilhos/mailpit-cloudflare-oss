@@ -208,6 +208,7 @@ export default {
 
 		// Ajax error message
 		handleError(error) {
+			if (error.response?.status === 401) return; // Authentication redirects centrally.
 			// handle error
 			if (error.response && error.response.data) {
 				// The request was made and the server responded with a status code

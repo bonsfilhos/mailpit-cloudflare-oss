@@ -6,7 +6,13 @@ Captured messages may contain magic links, personal data, payment context and at
 
 ## Controls
 
-- Worker-level authentication protects UI and read/mutation APIs.
+- Native login reuses the existing credential with standard username/password fields and password-manager autocomplete. Sessions use Secure/HttpOnly/SameSite=Strict host-only cookies and expire after an absolute 12 hours.
+- D1 stores opaque token hashes, CSRF tokens and expirations, never credentials. Prelogin and session cookies use domain-separated HMAC-SHA256 with the existing password secret; no new secret is needed.
+- Login/logout require exact Origin, without trusting forwarded headers or accepting Origin:null. Login also validates a signed ten-minute prelogin CSRF cookie. Cookie mutations require session CSRF; detail GET/HEAD also require CSRF because detail GET changes read state. Same-origin Fetch Metadata covers reads where Origin is omitted.
+- Login/inbox HTML uses Referrer-Policy same-origin so native POSTs retain Origin; external sites receive no referrer. Login, authenticated responses and redirects are private/no-store.
+- API Basic is preserved for machine clients without Origin/Fetch Metadata. Cached browser Basic credentials cannot bypass cookie/CSRF boundaries. HTTP ingestion keeps its separate bearer credential.
+- Event sockets validate the browser's Origin and authenticated session, expire through Durable Object alarms and skip broadcasts after expiry. Logout revokes the D1 session and its sockets, including other tabs. Machine Basic event connections preserve their previous lifetime.
+- Password/username rotation invalidates cookies. Already-open sockets expire at their original deadline or close on explicit logout. Passwords/session credentials never enter URLs, frontend storage or rendered HTML.
 - Optional HTTP ingestion uses a distinct bearer secret.
 - The Email Worker accepts only the configured inbound domain.
 - HTML is sanitized and rendered in a sandboxed iframe.
