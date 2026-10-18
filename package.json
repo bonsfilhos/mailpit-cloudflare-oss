@@ -48,7 +48,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "5.20260822.1",
     "@eslint/js": "^9.39.1",
-    "@types/node": "^24.10.1",
+    "@types/node": "^26.3.0",
     "@vue/compiler-sfc": "^3.5.22",
     "esbuild": "^0.28.2",
     "esbuild-plugin-vue-next": "^0.1.4",
