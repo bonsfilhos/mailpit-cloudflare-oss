@@ -39,6 +39,20 @@ curl -X POST http://127.0.0.1:8787/api/v1/send \
 
 Wrangler reads `.dev.vars` when the local server starts. Restart `npm run dev` after changing it.
 
+For a Codex worktree, choose a free loopback port explicitly:
+
+```bash
+npm run dev -- --ip 127.0.0.1 --port 8788
+```
+
+With Portless installed and its proxy active, use a distinct name per worktree from a POSIX terminal:
+
+```bash
+portless --name mailpit-cloudflare-my-task -- sh -c 'npm run dev -- --ip 127.0.0.1 --port "$PORT"'
+```
+
+Use the URL printed by Portless, including its proxy port when present, and verify the direct backend before sharing. Use that verified preview URL for local injection calls as well. Each worktree keeps its own local Wrangler state, ignored instance configuration and `.dev.vars`; do not copy another instance's private values automatically. The former workspace configuration is preserved as history in [docs/legacy/paseo.json.txt](docs/legacy/paseo.json.txt).
+
 ## Cloudflare installation
 
 ```bash
